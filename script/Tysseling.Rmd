@@ -1,0 +1,179 @@
+---
+title: 'Homework #3'
+author: "Asa Tysseling"
+date: "December 5, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## k-prototype
+
+```{r kproto}
+crash <- read.csv("~/Data_Science_Cert_Courses/BIA6301_-_Applied_Data_Mining/HW3/crash.csv")
+summary(crash)
+pMiss <- function(x){sum(is.na(x))/length(x)*100} 
+apply(crash,2,pMiss)
+```
+```{r addCensusRegion}
+crash$CensusRegion <- ifelse(crash$State=="Illinois"|crash$State=="Indiana"|
+                             crash$State=="Michigan"|crash$State=="Ohio"|
+                             crash$State=="Wisconsin"|crash$State=="Iowa"|
+                             crash$State=="Kansas"|crash$State=="Minnesota"|
+                             crash$State=="Missouri"|crash$State=="Nebraska"|
+                              crash$State=="North Dakota"|crash$State=="South Dakota","Midwest",
+                     ifelse(crash$State=="Connecticut"|crash$State=="Maine"|
+                             crash$State=="Massachusetts"|crash$State=="New Hampshire"|
+                             crash$State=="Rhode Island"|crash$State=="Vermont"|
+                             crash$State=="New Jersey"|crash$State=="New York"|
+                             crash$State=="Pennsylvania","Northeast",
+                     ifelse(crash$State=="Delaware"|crash$State=="Florida"|
+                             crash$State=="Georgia"|crash$State=="Maryland"|
+                             crash$State=="North Carolina"|crash$State=="South Carolina"|
+                             crash$State=="Virginia"|crash$State=="District of Columbia"|
+                             crash$State=="West Virginia"|crash$State=="Alabama"|
+                             crash$State=="Kentucky"|crash$State=="Mississippi"|
+                             crash$State=="Tennessee"|crash$State=="Arkansas"|
+                             crash$State=="Louisiana"|crash$State=="Oklahoma"|
+                             crash$State=="Texas","South",
+                     ifelse(crash$State=="Arizona"|crash$State=="Colorado"|
+                             crash$State=="Idaho"|crash$State=="Montana"|
+                             crash$State=="Nevada"|crash$State=="New Mexico"|
+                             crash$State=="Utah"|crash$State=="Wyoming"|
+                             crash$State=="Alaska"|crash$State=="California"|
+                             crash$State=="Hawaii"|crash$State=="Oregon"|
+                             crash$State=="Washington","West","N/A"))))
+```
+
+```{r dataclean}
+library(tidyverse)
+crash_clean <- filter(crash, Gender!="Not Reported")
+crash_clean <- filter(crash_clean, Gender!="Unknown")
+crash_clean <- filter(crash_clean, Drug.Involvement!="\\N")
+crash_clean <- filter(crash_clean, Race!="\\N")
+crash_clean <- filter(crash_clean, Roadway!="\\N")
+crash_clean$Age <- ifelse(is.na(crash_clean$Age),999999,crash_clean$Age)
+crash_clean <- crash_clean[,-10]
+crash_clean <- filter(crash_clean, Age!=999999)
+crash_clean$Alcohol.Results <- ifelse(is.na(crash_clean$Alcohol.Results),0,crash_clean$Alcohol.Results)
+apply(crash_clean,2,pMiss)
+#remove state
+crash_clean <- crash_clean[,-1]
+#remove date
+crash_clean <- crash_clean[,-2]
+#remove day, month, year
+crash_clean <- crash_clean[,-10]
+crash_clean <- crash_clean[,-10]
+crash_clean <- crash_clean[,-10]
+crash_clean <- crash_clean[,-10]
+#create age ranges
+#summary(crash_clean$Age)
+#quantile(crash_clean$Age,prob = seq(0, 1, length = 6),na.rm=TRUE)
+#crash_clean$Age2<-
+  #ifelse(crash_clean$Age<=20,"0-20",
+    #ifelse (crash_clean$Age<=29, "21-29",
+      #ifelse(crash_clean$Age<=43, "30-43",
+        #ifelse(crash_clean$Age<=56, "44-56",
+          #ifelse(crash_clean$Age>56, "57+","NA")))))
+
+#table(crash_clean$Age2) 
+#remove age
+#crash_clean <- crash_clean[,-4]
+#create alchohol ranges
+
+#summary(crash_clean$Alcohol.Results)
+#quantile(crash_clean$Alcohol.Results,prob = seq(0, 1, length = 6),na.rm=TRUE)
+    #no good quantiles, will use a couple of ranges
+#crash_clean$Alcohol.Results<-
+  #ifelse(crash_clean$Alcohol.Results<=0.00,"Sober",
+    #ifelse (crash_clean$Alcohol.Results<=.08, "Mild Intox",
+      #ifelse(crash_clean$Alcohol.Results<=.16, "Intoxicated",
+        #ifelse(crash_clean$Alcohol.Results>.16, "Very Intox","NA"))))
+
+#table(crash_clean_dummy_ $Alcohol.Results) 
+#remove number of fatalities
+#crash_clean <- crash_clean[,-2]
+```
+```{r kproto1}
+library(clustMixType)
+crash_kprototype <- kproto(crash_clean, k=3)
+```
+```{r kproto2}
+#commenting out because it is causing error
+#summary(crash_kprototype)
+```
+```{r kproto3}
+crash_clean$cluster_kprototype <- crash_kprototype$cluster
+crash_clean.mixed.profiles <- aggregate(crash_clean[,-c(1,3,6:10)], by=list(crash_clean$cluster_kprototype), FUN=mean)
+subset(crash_clean, cluster_kprototype==1)
+```
+```{r kproto4}
+subset(crash_clean, cluster_kprototype==2)
+```
+```{r kproto5}
+subset(crash_clean, cluster_kprototype==3)
+```
+
+##PCA Analysis
+```{r pca}
+universities <- read.csv("~/Data_Science_Cert_Courses/BIA6301_-_Applied_Data_Mining/HW3/Universities.csv")
+#remove NA's
+universities <- na.omit(universities)
+universities$College_and_State <- paste(universities$College.Name, " (", universities$State, ")")
+#remove categorical variables
+universities <- universities[,-c(1:3)]
+
+row.names(universities) <- universities$College.Name
+universities.complete <- universities[,-18]
+names(universities.complete)
+```
+```{r pca1}
+set.seed(123)
+pcs <- prcomp(universities.complete)
+summary(pcs)
+```
+```{r pca2}
+pcs.variance.explained <-(pcs$sdev^2 / sum(pcs$sdev^2))*100
+barplot(pcs.variance.explained, las=2, xlab="Principal Component", ylab="% Variance Explained", main="Principal Components versus Percent of Variance Explained")
+```
+```{r pca3}
+pcs$rotation
+```
+```{r pca4}
+pcs <- prcomp(universities.complete, scale. = T)
+summary(pcs)
+```
+```{r pca5}
+pcs.variance.explained <-(pcs$sdev^2 / sum(pcs$sdev^2))*100
+barplot(pcs.variance.explained, las=2, xlab="Principal Component", ylab="% Variance Explained", main="Principal Components versus Percent of Variance Explained")
+```
+```{r pca 6}
+screeplot(pcs, type="line")
+```
+```{r pca7}
+pcs$rotation
+```
+```{r pca 8}
+scores<-as.data.frame(pcs$x)
+
+library(ggplot2)
+library(ggrepel)
+ggplot(scores) +
+  geom_point(aes(PC1, PC2), color = 'red') +
+  geom_text_repel(aes(PC1, PC2, label = rownames(scores))) +
+  theme_classic(base_size = 16)
+```
+
+
+
+
+
+
+
+
+
+
+
+
